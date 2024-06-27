@@ -104,7 +104,90 @@ def buscar_instituicao_municipio():
         return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
 
 
-# ENDPOINT - Comparar desempenho entre escolas Federais e Estaduais em um estado específico
+# ENDPOINT - Comparar desempenho entre escolas Estaduais e Municipais em um estado específico
+@app.route('/api/comparar-desempenho-municipio', methods=['GET'])
+def comparar_desempenho():
+    municipio = request.args.get('estado', default='PB', type=str)
+    nivel = request.args.get('nivel', default=1, type=int)
+
+    pipeline_municipais = [
+        {
+            '$match': {
+                'municipio': municipio,
+                'nivel': nivel,
+                'tipo': 'M'
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 5  # Limitando para exibir as top 5 escolas Federais
+        }
+    ]
+
+    pipeline_estaduais = [
+        {
+            '$match': {
+                'uf': municipio,
+                'nivel': nivel,
+                'tipo': 'E'
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 5  # Limitando para exibir as top 5 escolas Estaduais
+        }
+    ]
+
+    resultados_municipais = list(collection.aggregate(pipeline_municipais))
+    resultados_estaduais = list(collection.aggregate(pipeline_estaduais))
+
+    # Preparando resposta
+    response = {
+        'municipio': municipio,
+        'nivel': nivel,
+        'escolas_municipais:': [],
+        'escolas_estaduais': []
+    }
+
+    # Adicionando escolas Federais no resultado
+    for idx, resultado in enumerate(resultados_municipais):
+        response['escolas_municipais'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    # Adicionando escolas Estaduais no resultado
+    for idx, resultado in enumerate(resultados_estaduais):
+        response['escolas_estaduais'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    return jsonify(response), 200
+
+#Metodo para comparar desempenho entre escolas Estaduais e Federais no nivel 3 em um Estado especifico (Ensino Médio)
 @app.route('/api/comparar-desempenho', methods=['GET'])
 def comparar_desempenho():
     estado = request.args.get('estado', default='PB', type=str)
