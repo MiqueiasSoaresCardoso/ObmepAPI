@@ -103,6 +103,90 @@ def buscar_instituicao_municipio():
     else:
         return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
 
+
+# ENDPOINT - Comparar desempenho entre escolas Federais e Estaduais em um estado específico
+@app.route('/api/comparar-desempenho', methods=['GET'])
+def comparar_desempenho():
+    estado = request.args.get('estado', default='PB', type=str)
+    nivel = 3  # Considerando apenas o nível 3 (Ensino médio)
+
+    pipeline_federais = [
+        {
+            '$match': {
+                'uf': estado,
+                'nivel': nivel,
+                'tipo': 'Federal'
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 5  # Limitando para exibir as top 5 escolas Federais
+        }
+    ]
+
+    pipeline_estaduais = [
+        {
+            '$match': {
+                'uf': estado,
+                'nivel': nivel,
+                'tipo': 'Estadual'
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 5  # Limitando para exibir as top 5 escolas Estaduais
+        }
+    ]
+
+    resultados_federais = list(collection.aggregate(pipeline_federais))
+    resultados_estaduais = list(collection.aggregate(pipeline_estaduais))
+
+    # Preparando resposta
+    response = {
+        'estado': estado,
+        'nivel': nivel,
+        'escolas_federais': [],
+        'escolas_estaduais': []
+    }
+
+    # Adicionando escolas Federais no resultado
+    for idx, resultado in enumerate(resultados_federais):
+        response['escolas_federais'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    # Adicionando escolas Estaduais no resultado
+    for idx, resultado in enumerate(resultados_estaduais):
+        response['escolas_estaduais'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    return jsonify(response), 200
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
