@@ -1,10 +1,13 @@
+import ssl
+
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
 
 # Configuração da conexão com MongoDB Atlas
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
-client = MongoClient(uri)
+
+client = MongoClient(uri, ssl=True)
 db = client['Obmep']
 collection = db['Escola']
 
