@@ -13,6 +13,24 @@ collection = db['Escola']
 
 app = Flask(__name__)
 
+# ENDPOINT01 - Listar todas as escolas existentes
+@app.route('/api/listar-escolas', methods=['GET'])
+def listar_escolas():
+    try:
+        escolas = collection.distinct('escola')
+        return jsonify({'escolas': escolas}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
+# ENDPOINT - Listar todos os municípios existentes
+@app.route('/api/listar-municipios', methods=['GET'])
+def listar_municipios():
+    try:
+        municipios = collection.distinct('municipio')
+        return jsonify({'municipios': municipios}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+
 
 # ENDPOINT - 02
 # Dentro de um determinado estado, selecionando o nível e a edição da olimpíada, conseguir visualizar qual instituição mais se destacou nas premiações
@@ -62,7 +80,7 @@ def buscarinstituicao():
 # ENDPOINT - Buscar instituição mais destacada em um município
 @app.route('/api/buscarinstituicaomunicipio', methods=['GET'])
 def buscar_instituicao_municipio():
-    municipio = request.args.get('municipio', default='São Paulo', type=str)
+    municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
     nivel = request.args.get('nivel', default=3, type=int)
     edicao = request.args.get('edicao', default=2023, type=int)
 
@@ -105,87 +123,140 @@ def buscar_instituicao_municipio():
 
 
 # ENDPOINT - Comparar desempenho entre escolas Estaduais e Municipais em um estado específico
-@app.route('/api/comparar-desempenho-municipio', methods=['GET'])
-def comparar_desempenho_muni():
-    municipio = request.args.get('estado', default='PB', type=str)
-    nivel = request.args.get('nivel', default=1, type=int)
+####################################################################################################################
 
-    pipeline_municipais = [
+# ENDPOINT - Exibir trajetória de um estado ao longo das edições
+@app.route('/api/trajetoria-estado', methods=['GET'])
+def trajetoria_estado():
+    estado = request.args.get('estado', default='PB', type=str)
+
+    pipeline = [
         {
             '$match': {
-                'municipio': municipio,
-                'nivel': nivel,
-                'tipo': 'M'
+                'uf': estado
             }
         },
         {
             '$group': {
-                '_id': '$escola',
+                '_id': '$edicao',
                 'total_premiacoes': {'$sum': 1}
             }
         },
         {
             '$sort': {
-                'total_premiacoes': -1
+                '_id': 1  # Ordenar por edição (ano)
             }
-        },
-        {
-            '$limit': 5  # Limitando para exibir as top 5 escolas Federais
         }
     ]
 
-    pipeline_estaduais = [
+    resultados = list(collection.aggregate(pipeline))
+
+    if resultados:
+        # Preparando resposta
+        response = {
+            'estado': estado,
+            'trajetoria': []
+        }
+
+        for resultado in resultados:
+            response['trajetoria'].append({
+                'edicao': resultado['_id'],
+                'total_premiacoes': resultado['total_premiacoes']
+            })
+
+        return jsonify(response), 200
+    else:
+        return jsonify({'message': 'Nenhuma informação encontrada para o estado especificado'}), 404
+
+# ENDPOINT - Exibir trajetória de um município ao longo das edições
+@app.route('/api/trajetoria-municipio', methods=['GET'])
+def trajetoria_municipio():
+    municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
+
+    pipeline = [
         {
             '$match': {
-                'uf': municipio,
-                'nivel': nivel,
-                'tipo': 'E'
+                'municipio': municipio
             }
         },
         {
             '$group': {
-                '_id': '$escola',
+                '_id': '$edicao',
                 'total_premiacoes': {'$sum': 1}
             }
         },
         {
             '$sort': {
-                'total_premiacoes': -1
+                '_id': 1  # Ordenar por edição (ano)
             }
-        },
-        {
-            '$limit': 5  # Limitando para exibir as top 5 escolas Estaduais
         }
     ]
 
-    resultados_municipais = list(collection.aggregate(pipeline_municipais))
-    resultados_estaduais = list(collection.aggregate(pipeline_estaduais))
+    resultados = list(collection.aggregate(pipeline))
 
-    # Preparando resposta
-    response = {
-        'municipio': municipio,
-        'nivel': nivel,
-        'escolas_municipais:': [],
-        'escolas_estaduais': []
-    }
+    if resultados:
+        # Preparando resposta
+        response = {
+            'municipio': municipio,
+            'trajetoria': []
+        }
 
-    # Adicionando escolas Federais no resultado
-    for idx, resultado in enumerate(resultados_municipais):
-        response['escolas_municipais'].append({
-            'posicao': idx + 1,
-            'instituicao': resultado['_id'],
-            'total_premiacoes': resultado['total_premiacoes']
-        })
+        for resultado in resultados:
+            response['trajetoria'].append({
+                'edicao': resultado['_id'],
+                'total_premiacoes': resultado['total_premiacoes']
+            })
 
-    # Adicionando escolas Estaduais no resultado
-    for idx, resultado in enumerate(resultados_estaduais):
-        response['escolas_estaduais'].append({
-            'posicao': idx + 1,
-            'instituicao': resultado['_id'],
-            'total_premiacoes': resultado['total_premiacoes']
-        })
+        return jsonify(response), 200
+    else:
+        return jsonify({'message': 'Nenhuma informação encontrada para o município especificado'}), 404
 
-    return jsonify(response), 200
+# ENDPOINT - Exibir trajetória de uma escola ao longo das edições
+@app.route('/api/trajetoria-escola', methods=['GET'])
+def trajetoria_escola():
+    escola = request.args.get('escola', type=str)
+
+    if not escola:
+        return jsonify({'message': 'O parâmetro "escola" é obrigatório'}), 400
+
+    pipeline = [
+        {
+            '$match': {
+                'escola': escola
+            }
+        },
+        {
+            '$group': {
+                '_id': '$edicao',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                '_id': 1  # Ordenar por edição (ano)
+            }
+        }
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    if resultados:
+        # Preparando resposta
+        response = {
+            'escola': escola,
+            'trajetoria': []
+        }
+
+        for resultado in resultados:
+            response['trajetoria'].append({
+                'edicao': resultado['_id'],
+                'total_premiacoes': resultado['total_premiacoes']
+            })
+
+        return jsonify(response), 200
+    else:
+        return jsonify({'message': 'Nenhuma informação encontrada para a escola especificada'}), 404
+
 
 #Metodo para comparar desempenho entre escolas Estaduais e Federais no nivel 3 em um Estado especifico (Ensino Médio)
 @app.route('/api/comparar-desempenho', methods=['GET'])
@@ -198,7 +269,7 @@ def comparar_desempenho():
             '$match': {
                 'uf': estado,
                 'nivel': nivel,
-                'tipo': 'Federal'
+                'tipo': 'F'
             }
         },
         {
@@ -222,7 +293,7 @@ def comparar_desempenho():
             '$match': {
                 'uf': estado,
                 'nivel': nivel,
-                'tipo': 'Estadual'
+                'tipo': 'E'
             }
         },
         {
@@ -269,6 +340,52 @@ def comparar_desempenho():
         })
 
     return jsonify(response), 200
+
+
+# ENDPOINT - Listar estados com mais premiações em uma determinada edição
+@app.route('/api/estados-mais-premiacoes', methods=['GET'])
+def estados_mais_premiacoes():
+    edicao = request.args.get('edicao',default='2021', type=int)
+
+    if not edicao:
+        return jsonify({'message': 'O parâmetro "edicao" é obrigatório'}), 400
+
+    pipeline = [
+        {
+            '$match': {
+                'edicao': edicao
+            }
+        },
+        {
+            '$group': {
+                '_id': '$uf',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        }
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    if resultados:
+        response = {
+            'edicao': edicao,
+            'estados': []
+        }
+
+        for resultado in resultados:
+            response['estados'].append({
+                'estado': resultado['_id'],
+                'total_premiacoes': resultado['total_premiacoes']
+            })
+
+        return jsonify(response), 200
+    else:
+        return jsonify({'message': 'Nenhuma informação encontrada para a edição especificada'}), 404
 
 # ENDPOINT - Exibir Ranking por estados e tipo de premiação
 @app.route('/api/ranking', methods=['GET'])
