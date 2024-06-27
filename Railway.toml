@@ -1,2 +1,9 @@
-[build] builder = "Nixpacks"
-[deploy] command = "python app.py"
+# Railway.toml
+[service]
+name = "nome-do-seu-serviço"
+
+[build]
+builder = "paketobuildpacks/builder:base"
+
+[deploy]
+start = "python Api.py" # ou o nome do arquivo principal que inicia seu aplicativo Flask
