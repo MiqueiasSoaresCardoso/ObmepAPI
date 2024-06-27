@@ -106,7 +106,7 @@ def buscar_instituicao_municipio():
 
 # ENDPOINT - Comparar desempenho entre escolas Estaduais e Municipais em um estado específico
 @app.route('/api/comparar-desempenho-municipio', methods=['GET'])
-def comparar_desempenho():
+def comparar_desempenho_muni():
     municipio = request.args.get('estado', default='PB', type=str)
     nivel = request.args.get('nivel', default=1, type=int)
 
