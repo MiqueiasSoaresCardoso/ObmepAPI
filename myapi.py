@@ -123,7 +123,90 @@ def buscar_instituicao_municipio():
 
 
 # ENDPOINT - Comparar desempenho entre escolas Estaduais e Municipais em um estado específico
-####################################################################################################################
+
+# ENDPOINT - Comparar desempenho entre escolas Municipais e Estaduais em um estado e nível específicos
+@app.route('/api/comparar-desempenho-municipal-estadual', methods=['GET'])
+def comparar_desempenho_municipal_estadual():
+    estado = request.args.get('estado', default='PB', type=str)
+    nivel = request.args.get('nivel', default=1, type=int)
+
+    pipeline_municipais = [
+        {
+            '$match': {
+                'uf': estado,
+                'nivel': nivel,
+                'tipo': 'M'  # Escolas Municipais
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 5  # Limitando para exibir as top 5 escolas Municipais
+        }
+    ]
+
+    pipeline_estaduais = [
+        {
+            '$match': {
+                'uf': estado,
+                'nivel': nivel,
+                'tipo': 'E'  # Escolas Estaduais
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 5  # Limitando para exibir as top 5 escolas Estaduais
+        }
+    ]
+
+    resultados_municipais = list(collection.aggregate(pipeline_municipais))
+    resultados_estaduais = list(collection.aggregate(pipeline_estaduais))
+
+    # Preparando resposta
+    response = {
+        'estado': estado,
+        'nivel': nivel,
+        'escolas_municipais': [],
+        'escolas_estaduais': []
+    }
+
+    # Adicionando escolas Municipais no resultado
+    for idx, resultado in enumerate(resultados_municipais):
+        response['escolas_municipais'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    # Adicionando escolas Estaduais no resultado
+    for idx, resultado in enumerate(resultados_estaduais):
+        response['escolas_estaduais'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    return jsonify(response), 200
+
 
 # ENDPOINT - Exibir trajetória de um estado ao longo das edições
 @app.route('/api/trajetoria-estado', methods=['GET'])
@@ -387,35 +470,20 @@ def estados_mais_premiacoes():
     else:
         return jsonify({'message': 'Nenhuma informação encontrada para a edição especificada'}), 404
 
-# ENDPOINT - Exibir Ranking por estados e tipo de premiação
-@app.route('/api/ranking', methods=['GET'])
-def ranking_por_estado():
-    estado = request.args.get('estado', type=str)
-    medalha = request.args.get('medalha', type=str)  # Pode ser 'ouro', 'prata', 'bronze' ou 'todas'
-    edicao = request.args.get('edicao', type=int)
 
-    match_filter = {
-        'uf': estado,
-        'edicao': edicao
-    }
-
-    if medalha and medalha != 'todas':
-        match_filter['tipo'] = medalha
-
+# ENDPOINT - Exibir Ranking geral de premiações por estado ao longo dos anos
+@app.route('/api/ranking-geral-estados', methods=['GET'])
+def ranking_geral_estados():
     pipeline = [
         {
-            '$match': match_filter
-        },
-        {
             '$group': {
-                '_id': '$instituicao',
-                'total_premios': {'$sum': 1},
-                'medalha': {'$first': '$medalha'}  # Para garantir que o tipo seja o mesmo para a instituição
+                '_id': '$uf',  # Agrupa por estado (UF)
+                'total_premios': {'$sum': 1}  # Conta o número total de premiações por estado
             }
         },
         {
             '$sort': {
-                'total_premios': -1
+                'total_premios': -1  # Ordena em ordem decrescente pelo total de premiações
             }
         }
     ]
@@ -424,21 +492,84 @@ def ranking_por_estado():
 
     # Preparando resposta
     response = {
-        'estado': estado,
-        'tipo_premiacao': medalha if medalha else 'todas',
-        'edicao': edicao,
         'ranking': []
     }
 
     for idx, resultado in enumerate(resultados):
         response['ranking'].append({
             'posicao': idx + 1,
-            'instituicao': resultado['_id'],
-            'total_premios': resultado['total_premios'],
-            'tipo': resultado['tipo']
+            'estado': resultado['_id'],
+            'total_premios': resultado['total_premios']
         })
 
     return jsonify(response), 200
+
+
+# ENDPOINT - Comparar desempenho entre escolas Públicas e Privadas em um município e edição específicos
+@app.route('/api/comparar-desempenho-publico-privado', methods=['GET'])
+def comparar_desempenho_publico_privado():
+    municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
+    edicao = request.args.get('edicao', default=2023, type=int)
+
+    pipeline_publicas = [
+        {
+            '$match': {
+                'municipio': municipio,
+                'tipo': 'E',  # Escolas Públicas
+                'edicao': edicao
+            }
+        },
+        {
+            '$group': {
+                '_id': '$nivel',
+                'total_premiacoes': {'$sum': 1}
+            }
+        }
+    ]
+
+    pipeline_privadas = [
+        {
+            '$match': {
+                'municipio': municipio,
+                'tipo': 'P',  # Escolas Privadas
+                'edicao': edicao
+            }
+        },
+        {
+            '$group': {
+                '_id': '$nivel',
+                'total_premiacoes': {'$sum': 1}
+            }
+        }
+    ]
+
+    resultados_publicas = list(collection.aggregate(pipeline_publicas))
+    resultados_privadas = list(collection.aggregate(pipeline_privadas))
+
+    # Preparando resposta
+    response = {
+        'municipio': municipio,
+        'edicao': edicao,
+        'escolas_publicas': [],
+        'escolas_privadas': []
+    }
+
+    # Adicionando escolas Públicas no resultado
+    for resultado in resultados_publicas:
+        response['escolas_publicas'].append({
+            'nivel': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    # Adicionando escolas Privadas no resultado
+    for resultado in resultados_privadas:
+        response['escolas_privadas'].append({
+            'nivel': resultado['_id'],
+            'total_premiacoes': resultado['total_premiacoes']
+        })
+
+    return jsonify(response), 200
+
 
 
 if __name__ == '__main__':
