@@ -274,7 +274,7 @@ def comparar_desempenho():
 @app.route('/api/ranking', methods=['GET'])
 def ranking_por_estado():
     estado = request.args.get('estado', type=str)
-    tipo = request.args.get('tipo', type=str)  # Pode ser 'ouro', 'prata', 'bronze' ou 'todas'
+    medalha = request.args.get('medalha', type=str)  # Pode ser 'ouro', 'prata', 'bronze' ou 'todas'
     edicao = request.args.get('edicao', type=int)
 
     match_filter = {
@@ -282,8 +282,8 @@ def ranking_por_estado():
         'edicao': edicao
     }
 
-    if tipo and tipo != 'todas':
-        match_filter['tipo'] = tipo
+    if medalha and medalha != 'todas':
+        match_filter['tipo'] = medalha
 
     pipeline = [
         {
@@ -293,7 +293,7 @@ def ranking_por_estado():
             '$group': {
                 '_id': '$instituicao',
                 'total_premios': {'$sum': 1},
-                'tipo': {'$first': '$tipo'}  # Para garantir que o tipo seja o mesmo para a instituição
+                'medalha': {'$first': '$medalha'}  # Para garantir que o tipo seja o mesmo para a instituição
             }
         },
         {
@@ -308,7 +308,7 @@ def ranking_por_estado():
     # Preparando resposta
     response = {
         'estado': estado,
-        'tipo_premiacao': tipo if tipo else 'todas',
+        'tipo_premiacao': medalha if medalha else 'todas',
         'edicao': edicao,
         'ranking': []
     }
