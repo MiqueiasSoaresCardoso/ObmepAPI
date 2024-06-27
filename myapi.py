@@ -278,7 +278,7 @@ def ranking_por_estado():
     edicao = request.args.get('edicao', type=int)
 
     match_filter = {
-        'estado': estado,
+        'uf': estado,
         'edicao': edicao
     }
 
