@@ -9,13 +9,13 @@ collection = db['Escola']
 
 app = Flask(__name__)
 
-#ENDPOINT - 02
-#Dentro de um determinado estado,selecionando o nível e a edição da olimpíada, conseguir visualizar qual instituição mais se destacou nas premiações
-@app.route('/api/buscarinstuicaoestado', methods = ['GET'])
-def buscarinstuicao():
-    estado = request.args.get('estado',default= 'PB',type= str)
-    nivel = request.args.get('nivel', default= 3, type= int)
-    edicao = request.args.get('edicao', default= 2023, type= int)
+# ENDPOINT - 02
+# Dentro de um determinado estado, selecionando o nível e a edição da olimpíada, conseguir visualizar qual instituição mais se destacou nas premiações
+@app.route('/api/buscarinstituicaoestado', methods=['GET'])
+def buscarinstituicao():
+    estado = request.args.get('estado', default='PB', type=str)
+    nivel = request.args.get('nivel', default=3, type=int)
+    edicao = request.args.get('edicao', default=2023, type=int)
 
     pipeline = [
         {
@@ -50,9 +50,9 @@ def buscarinstuicao():
             'edicao': edicao,
             'instituicao': resultados[0]['_id'],
             'total_premiacoes': resultados[0]['total_premiacoes'],
-        }),200
+        }), 200
     else:
-        return jsonify({'message':'Nenhuma instituição encontrada para os critérios especificados'}),404
+        return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)
