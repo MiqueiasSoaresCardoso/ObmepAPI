@@ -1,6 +1,6 @@
 # Railway.toml
 [service]
-name = "nome-do-seu-serviço"
+name = "ObmepService"
 
 [build]
 builder = "paketobuildpacks/builder:base"
