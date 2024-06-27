@@ -1,5 +1,5 @@
 import ssl
-from flasgger import Swagger, swag_from
+
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
@@ -12,11 +12,11 @@ db = client['Obmep']
 collection = db['Escola']
 
 app = Flask(__name__)
-swagger = Swagger(app)
+
 
 # ENDPOINT01 - Listar todas as escolas existentes
 @app.route('/api/listar-escolas', methods=['GET'])
-@swag_from('swagger/api/listar-escolas')
+
 def listar_escolas():
     try:
         escolas = collection.distinct('escola')
