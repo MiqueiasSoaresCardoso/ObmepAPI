@@ -58,6 +58,50 @@ def buscarinstituicao():
         }), 200
     else:
         return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
+#-----------------------------------------------------------------------------------------------------------------------------------------------------
+# ENDPOINT - Buscar instituição mais destacada em um município
+@app.route('/api/buscarinstituicaomunicipio', methods=['GET'])
+def buscar_instituicao_municipio():
+    municipio = request.args.get('municipio', default='São Paulo', type=str)
+    nivel = request.args.get('nivel', default=3, type=int)
+    edicao = request.args.get('edicao', default=2023, type=int)
+
+    pipeline = [
+        {
+            '$match': {
+                'municipio': municipio,
+                'nivel': nivel,
+                'edicao': edicao
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+                'total_premiacoes': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {
+                'total_premiacoes': -1
+            }
+        },
+        {
+            '$limit': 1  # Limitando para exibir apenas a instituição com mais premiações
+        }
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    if resultados:
+        return jsonify({
+            'municipio': municipio,
+            'nivel': nivel,
+            'edicao': edicao,
+            'instituicao': resultados[0]['_id'],
+            'total_premiacoes': resultados[0]['total_premiacoes'],
+        }), 200
+    else:
+        return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
