@@ -270,6 +270,60 @@ def comparar_desempenho():
 
     return jsonify(response), 200
 
+# ENDPOINT - Exibir Ranking por estados e tipo de premiação
+@app.route('/api/ranking', methods=['GET'])
+def ranking_por_estado():
+    estado = request.args.get('estado', type=str)
+    tipo = request.args.get('tipo', type=str)  # Pode ser 'ouro', 'prata', 'bronze' ou 'todas'
+    edicao = request.args.get('edicao', type=int)
+
+    match_filter = {
+        'estado': estado,
+        'edicao': edicao
+    }
+
+    if tipo and tipo != 'todas':
+        match_filter['tipo'] = tipo
+
+    pipeline = [
+        {
+            '$match': match_filter
+        },
+        {
+            '$group': {
+                '_id': '$instituicao',
+                'total_premios': {'$sum': 1},
+                'tipo': {'$first': '$tipo'}  # Para garantir que o tipo seja o mesmo para a instituição
+            }
+        },
+        {
+            '$sort': {
+                'total_premios': -1
+            }
+        }
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    # Preparando resposta
+    response = {
+        'estado': estado,
+        'tipo_premiacao': tipo if tipo else 'todas',
+        'edicao': edicao,
+        'ranking': []
+    }
+
+    for idx, resultado in enumerate(resultados):
+        response['ranking'].append({
+            'posicao': idx + 1,
+            'instituicao': resultado['_id'],
+            'total_premios': resultado['total_premios'],
+            'tipo': resultado['tipo']
+        })
+
+    return jsonify(response), 200
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
