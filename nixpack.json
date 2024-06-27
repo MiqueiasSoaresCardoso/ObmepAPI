@@ -1,0 +1,10 @@
+{
+  "name": "meu-aplicativo",
+  "version": "0.1.0",
+  "description": "Meu primeiro aplicativo Nixpacks",
+  "provider": "python",
+  "build": {
+    "entrypoint": "requirements.txt"
+  },
+  "start": "python Api.py"
+}
