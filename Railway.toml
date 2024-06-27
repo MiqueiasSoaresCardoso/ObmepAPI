@@ -6,4 +6,4 @@ name = "nome-do-seu-serviço"
 builder = "paketobuildpacks/builder:base"
 
 [deploy]
-start = "python Api.py" # ou o nome do arquivo principal que inicia seu aplicativo Flask
+start = "Api.py" # ou o nome do arquivo principal que inicia seu aplicativo Flask
