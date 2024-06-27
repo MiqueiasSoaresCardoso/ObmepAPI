@@ -9,10 +9,7 @@ collection = db['Escola']
 
 app = Flask(__name__)
 
-@app.route('/')
-def index():
-    print("Bem-vindo ao Obmep")
-#
+
 # ENDPOINT - 02
 # Dentro de um determinado estado, selecionando o nível e a edição da olimpíada, conseguir visualizar qual instituição mais se destacou nas premiações
 @app.route('/api/buscarinstituicaoestado', methods=['GET'])
