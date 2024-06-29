@@ -1,20 +1,26 @@
 import ssl
-
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
 
 # Configuração da conexão com MongoDB Atlas
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
-
 client = MongoClient(uri, ssl=True)
 db = client['Obmep']
 collection = db['Escola']
 
 app = Flask(__name__)
 
+#Criação dos Indices
+collection.create_index({"escola": 1})
+collection.create_index({"municipio": 1})
+collection.create_index({"tipo": 1})
+collection.create_index({"edição": 1})
+collection.create_index({"nivel": 1})
+collection.create_index({"uf": 1})
 
-# ENDPOINT01 - Listar todas as escolas existentes
+
+# ENDPOINTS GERAIS
 @app.route('/api/listar-escolas', methods=['GET'])
 
 def listar_escolas():
@@ -24,7 +30,7 @@ def listar_escolas():
     except Exception as e:
         return jsonify({'message': str(e)}), 500
 
-# ENDPOINT - Listar todos os municípios existentes
+
 @app.route('/api/listar-municipios', methods=['GET'])
 def listar_municipios():
     try:
@@ -34,7 +40,7 @@ def listar_municipios():
         return jsonify({'message': str(e)}), 500
 
 
-# ENDPOINT - 02
+# ENDPOINT ESPECIFICOS
 # Dentro de um determinado estado, selecionando o nível e a edição da olimpíada, conseguir visualizar qual instituição mais se destacou nas premiações
 @app.route('/api/buscarinstituicaoestado', methods=['GET'])
 def buscarinstituicao():
