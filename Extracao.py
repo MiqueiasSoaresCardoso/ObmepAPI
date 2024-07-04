@@ -2,7 +2,8 @@ import pandas as pd
 from pymongo import MongoClient
 #
 # Passo 1: Configurar a conexão com o MongoDB
-client = MongoClient('mongodb://localhost:27017/')
+uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
+client = MongoClient(uri, ssl=True)
 db = client['Obmep']
 collection = db['Escola']
 
