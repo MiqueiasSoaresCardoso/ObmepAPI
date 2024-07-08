@@ -140,13 +140,15 @@ def buscar_instituicao_municipio():
 def comparar_desempenho_municipal_estadual():
     estado = request.args.get('estado', default='PB', type=str)
     nivel = request.args.get('nivel', default=1, type=int)
+    edicao = request.args.get('edicao', default=2023, type=int)
 
     pipeline_municipais = [
         {
             '$match': {
                 'uf': estado,
                 'nivel': nivel,
-                'tipo': 'M'  # Escolas Municipais
+                'tipo': 'M',  # Escolas Municipais
+                'edicao': edicao
             }
         },
         {
@@ -160,9 +162,7 @@ def comparar_desempenho_municipal_estadual():
                 'total_premiacoes': -1
             }
         },
-        {
-            '$limit': 5  # Limitando para exibir as top 5 escolas Municipais
-        }
+
     ]
 
     pipeline_estaduais = [
