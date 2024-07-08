@@ -89,7 +89,7 @@ def listar_municipios():
         return jsonify({'message': 'Nenhum Municipio encontrada para os critérios especificados'}), 404
 
 
-# ENDPOINT ESPECIFICOS
+#01 ENDPOINT ESPECIFICOS
 # Dentro de um determinado estado, selecionando o nível e a edição da olimpíada, conseguir visualizar qual instituição mais se destacou nas premiações
 @app.route('/api/buscarinstituicaoestado', methods=['GET'])
 def buscarinstituicao():
@@ -134,7 +134,7 @@ def buscarinstituicao():
     else:
         return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
-# ENDPOINT - Buscar instituição mais destacada em um município
+#02 ENDPOINT - Buscar instituição mais destacada em um município
 @app.route('/api/buscarinstituicaomunicipio', methods=['GET'])
 def buscar_instituicao_municipio():
     municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
@@ -467,7 +467,7 @@ def comparar_desempenho():
     response = {
         'estado': estado,
         'nivel': nivel,
-        'edicao': edicao,
+        'edicao': edicao
         'escolas_federais': [],
         'escolas_estaduais': []
     }
@@ -576,18 +576,20 @@ def ranking_geral_estados():
     return jsonify(response), 200
 
 
-# ENDPOINT - Comparar desempenho entre escolas Públicas e Privadas em um município e edição específicos
+# ENDPOINT - Comparar desempenho entre escolas Públicas e Privadas em um município e edição específicos, considerando um nivel especifico
 @app.route('/api/comparar-desempenho-publico-privado', methods=['GET'])
 def comparar_desempenho_publico_privado():
     municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
     edicao = request.args.get('edicao', default=2023, type=int)
-#ALTERAR ERRO
+    nivel = request.args.get('nivel', default=1, type=int)
+
     pipeline_publicas = [
         {
             '$match': {
                 'municipio': municipio,
-                'tipo': 'E',  # Escolas Públicas
-                'edicao': edicao
+                'tipo': {'$ne': 'P'},  # Todas as escolas que não forem 'P' ou seja Privadas, serão consideradas
+                'edicao': edicao,
+                'nivel': nivel
             }
         },
         {
@@ -603,7 +605,8 @@ def comparar_desempenho_publico_privado():
             '$match': {
                 'municipio': municipio,
                 'tipo': 'P',  # Escolas Privadas
-                'edicao': edicao
+                'edicao': edicao,
+                'nivel': nivel
             }
         },
         {
