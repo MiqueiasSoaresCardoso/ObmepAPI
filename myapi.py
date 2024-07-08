@@ -24,13 +24,37 @@ collection.create_index({"uf": 1})
 
 # ENDPOINTS GERAIS
 @app.route('/api/listar-escolas', methods=['GET'])
-
 def listar_escolas():
-    try:
-        escolas = collection.distinct('escola')
-        return jsonify({'escolas': escolas}), 200
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
+    estado = request.args.get('estado', default='PB', type=str)
+    municipio = request.args.get('municipio', default='JOÃO PESSOA', type=int)
+
+    pipeline = [
+        {
+            '$match': {
+                'uf': estado,
+                'municipio': municipio
+
+            }
+        },
+        {
+            '$group': {
+                '_id': '$escola',
+
+            }
+        },
+
+
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    if resultados:
+        return jsonify({
+            'estado': estado,
+            'instituicao': resultados,
+        }), 200
+    else:
+        return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
 
 
 @app.route('/api/listar-municipios', methods=['GET'])
@@ -308,9 +332,11 @@ def trajetoria_municipio():
         return jsonify({'message': 'Nenhuma informação encontrada para o município especificado'}), 404
 
 # ENDPOINT - Exibir trajetória de uma escola ao longo das edições
+#SELECIONAR O ESTADO
+#MUNICIPIO
+#EXIBIR A LISTA DE ESCOLAS
 @app.route('/api/trajetoria-escola', methods=['GET'])
 def trajetoria_escola():
-    municipio = request.args.get('municipio',type=str)
     escola = request.args.get('escola', type=str)
 
     if not escola:
@@ -320,7 +346,7 @@ def trajetoria_escola():
         {
             '$match': {
                 'escola': escola,
-                'municipio': municipio
+
             }
         },
         {
@@ -342,7 +368,6 @@ def trajetoria_escola():
         # Preparando resposta
         response = {
             'escola': escola,
-            'municipio': municipio,
             'trajetoria': []
         }
 
