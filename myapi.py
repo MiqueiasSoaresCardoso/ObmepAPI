@@ -171,7 +171,8 @@ def comparar_desempenho_municipal_estadual():
             '$match': {
                 'uf': estado,
                 'nivel': nivel,
-                'tipo': 'E'  # Escolas Estaduais
+                'tipo': 'E' , # Escolas Estaduais
+                'edicao': edicao
             }
         },
         {
@@ -185,9 +186,7 @@ def comparar_desempenho_municipal_estadual():
                 'total_premiacoes': -1
             }
         },
-        {
-            '$limit': 5  # Limitando para exibir as top 5 escolas Estaduais
-        }
+
     ]
 
     resultados_municipais = list(collection.aggregate(pipeline_municipais))
