@@ -467,7 +467,7 @@ def comparar_desempenho():
     response = {
         'estado': estado,
         'nivel': nivel,
-        'edicao': edicao
+        'edicao': edicao,
         'escolas_federais': [],
         'escolas_estaduais': []
     }
@@ -491,20 +491,15 @@ def comparar_desempenho():
     return jsonify(response), 200
 
 
-# ENDPOINT - Listar estados com mais premiações em uma determinada edição
+# ENDPOINT - Listar todos os estados por ordem descrescente, considerando a quantidade de premiações em uma edição especifica
 @app.route('/api/estados-mais-premiacoes', methods=['GET'])
 def estados_mais_premiacoes():
-    edicao = request.args.get('edicao',default='2021', type=int)
+    #edicao = request.args.get('edicao',default='2023', type=int)
 
-    if not edicao:
-        return jsonify({'message': 'O parâmetro "edicao" é obrigatório'}), 400
+    #if not edicao:
+        #return jsonify({'message': 'O parâmetro "edicao" é obrigatório'}), 400
 
     pipeline = [
-        {
-            '$match': {
-                'edicao': edicao
-            }
-        },
         {
             '$group': {
                 '_id': '$uf',
@@ -522,7 +517,7 @@ def estados_mais_premiacoes():
 
     if resultados:
         response = {
-            'edicao': edicao,
+
             'estados': []
         }
 
@@ -541,9 +536,9 @@ def estados_mais_premiacoes():
 # CONSULTAS PRINCIPAL
 
 @app.route('/api/ranking-geral-estados', methods=['GET'])
-#PASSAR O ANO
 def ranking_geral_estados():
-    #edicao = request.args.get('edicao', default='2023', type=int)
+
+
     pipeline = [
 
         {
@@ -576,7 +571,7 @@ def ranking_geral_estados():
     return jsonify(response), 200
 
 
-# ENDPOINT - Comparar desempenho entre escolas Públicas e Privadas em um município e edição específicos, considerando um nivel especifico
+#10 ENDPOINT - Comparar desempenho entre escolas Públicas e Privadas em um município e edição específicos, considerando um nivel especifico
 @app.route('/api/comparar-desempenho-publico-privado', methods=['GET'])
 def comparar_desempenho_publico_privado():
     municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
