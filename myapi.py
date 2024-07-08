@@ -490,7 +490,7 @@ def comparar_desempenho():
 
     return jsonify(response), 200
 
-#exiba o total geral de premiações, e separa por medalhas de ouro, prata e bronze
+#exibe o total geral de premiações, e separa por medalhas de ouro, prata e bronze
 @app.route('/api/listar-total-premiacoes', methods=['GET'])
 def listar_total_premiacoes():
 
