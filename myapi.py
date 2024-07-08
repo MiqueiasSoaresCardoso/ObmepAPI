@@ -59,11 +59,34 @@ def listar_escolas():
 
 @app.route('/api/listar-municipios', methods=['GET'])
 def listar_municipios():
-    try:
-        municipios = collection.distinct('municipio')
-        return jsonify({'municipios': municipios}), 200
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
+    estado = request.args.get('estado', default='PB', type=str)
+
+
+    pipeline = [
+        {
+            '$match': {
+                'uf': estado,
+
+            }
+        },
+        {
+            '$group': {
+                '_id': '$municipio',
+            }
+        },
+
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    if resultados:
+        return jsonify({
+            'estado': estado,
+            'municipio': resultados,
+
+        }), 200
+    else:
+        return jsonify({'message': 'Nenhum Municipio encontrada para os critérios especificados'}), 404
 
 
 # ENDPOINT ESPECIFICOS
@@ -332,9 +355,11 @@ def trajetoria_municipio():
         return jsonify({'message': 'Nenhuma informação encontrada para o município especificado'}), 404
 
 # ENDPOINT - Exibir trajetória de uma escola ao longo das edições
+
 #SELECIONAR O ESTADO
 #MUNICIPIO
-#EXIBIR A LISTA DE ESCOLAS
+#REQUISIÇÃO PARA A LISTAGEM DE ESCOLAS
+#SELECIONA UMA
 @app.route('/api/trajetoria-escola', methods=['GET'])
 def trajetoria_escola():
     escola = request.args.get('escola', type=str)
@@ -386,6 +411,7 @@ def trajetoria_escola():
 @app.route('/api/comparar-desempenho', methods=['GET'])
 def comparar_desempenho():
     estado = request.args.get('estado', default='PB', type=str)
+    edicao = request.args.get('edicao', default= 2023, type=str)
     nivel = 3  # Considerando apenas o nível 3 (Ensino médio)
 
     pipeline_federais = [
@@ -393,6 +419,7 @@ def comparar_desempenho():
             '$match': {
                 'uf': estado,
                 'nivel': nivel,
+                'edicao': edicao,
                 'tipo': 'F'
             }
         },
@@ -407,9 +434,7 @@ def comparar_desempenho():
                 'total_premiacoes': -1
             }
         },
-        {
-            '$limit': 5  # Limitando para exibir as top 5 escolas Federais
-        }
+
     ]
 
     pipeline_estaduais = [
@@ -417,7 +442,8 @@ def comparar_desempenho():
             '$match': {
                 'uf': estado,
                 'nivel': nivel,
-                'tipo': 'E'
+                'tipo': 'E',
+                'edicao': edicao
             }
         },
         {
@@ -431,9 +457,7 @@ def comparar_desempenho():
                 'total_premiacoes': -1
             }
         },
-        {
-            '$limit': 5  # Limitando para exibir as top 5 escolas Estaduais
-        }
+
     ]
 
     resultados_federais = list(collection.aggregate(pipeline_federais))
@@ -443,6 +467,7 @@ def comparar_desempenho():
     response = {
         'estado': estado,
         'nivel': nivel,
+        'edicao': edicao,
         'escolas_federais': [],
         'escolas_estaduais': []
     }
@@ -513,9 +538,14 @@ def estados_mais_premiacoes():
 
 
 # ENDPOINT - Exibir Ranking geral de premiações por estado ao longo dos anos
+# CONSULTAS PRINCIPAL
+
 @app.route('/api/ranking-geral-estados', methods=['GET'])
+#PASSAR O ANO
 def ranking_geral_estados():
+    #edicao = request.args.get('edicao', default='2023', type=int)
     pipeline = [
+
         {
             '$group': {
                 '_id': '$uf',  # Agrupa por estado (UF)
@@ -551,7 +581,7 @@ def ranking_geral_estados():
 def comparar_desempenho_publico_privado():
     municipio = request.args.get('municipio', default='RIO DE JANEIRO', type=str)
     edicao = request.args.get('edicao', default=2023, type=int)
-
+#ALTERAR ERRO
     pipeline_publicas = [
         {
             '$match': {
