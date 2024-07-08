@@ -493,7 +493,7 @@ def comparar_desempenho():
 
 
 # ENDPOINT - Exibir Ranking geral de premiações por estado ao longo dos anos
-# CONSULTAS PRINCIPAL
+# CONSULTAS PRINCIPAl
 
 @app.route('/api/ranking-geral-estados', methods=['GET'])
 def ranking_geral_estados():
