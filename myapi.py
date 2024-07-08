@@ -490,6 +490,45 @@ def comparar_desempenho():
 
     return jsonify(response), 200
 
+#exiba o total geral de premiações, e separa por medalhas de ouro, prata e bronze
+@app.route('/api/listar-total-premiacoes', methods=['GET'])
+def listar_total_premiacoes():
+
+    pipeline = [
+
+        {
+            '$group': {
+                '_id': '$medalha',
+                'total_premiacoes': {'$sum': 1}
+            }
+        }
+    ]
+
+    resultados = list(collection.aggregate(pipeline))
+
+    # Preparando resposta
+    response = {
+        'total_geral': 0,
+        'medalhas': {
+            'ouro': 0,
+            'prata': 0,
+            'bronze': 0
+        }
+    }
+
+    # Adicionando premiações no resultado
+    for resultado in resultados:
+        medalha = resultado['_id']
+        total = resultado['total_premiacoes']
+        response['total_geral'] += total
+        if medalha == 'Ouro':
+            response['medalhas']['ouro'] = total
+        elif medalha == 'Prata':
+            response['medalhas']['prata'] = total
+        elif medalha == 'Bronze':
+            response['medalhas']['bronze'] = total
+
+    return jsonify(response), 200
 
 
 # ENDPOINT - Exibir Ranking geral de premiações por estado ao longo dos anos
