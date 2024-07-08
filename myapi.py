@@ -2,9 +2,8 @@ import ssl
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
+import sys
 from flask_cors import CORS
-
-
 
 # Configuração da conexão com MongoDB Atlas
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
@@ -585,4 +584,5 @@ def comparar_desempenho_publico_privado():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(sys.path)
     app.run(host='0.0.0.0', port=port, debug=True)
