@@ -2,6 +2,9 @@ import ssl
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
+from flask_cors import CORS
+
+
 
 # Configuração da conexão com MongoDB Atlas
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
@@ -10,7 +13,7 @@ db = client['Obmep']
 collection = db['Escola']
 
 app = Flask(__name__)
-
+CORS(app)
 #Criação dos Indices
 collection.create_index({"escola": 1})
 collection.create_index({"municipio": 1})
