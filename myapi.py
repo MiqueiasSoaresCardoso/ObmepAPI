@@ -310,6 +310,7 @@ def trajetoria_municipio():
 # ENDPOINT - Exibir trajetória de uma escola ao longo das edições
 @app.route('/api/trajetoria-escola', methods=['GET'])
 def trajetoria_escola():
+    municipio = request.args.get('municipio',type=str)
     escola = request.args.get('escola', type=str)
 
     if not escola:
@@ -318,7 +319,8 @@ def trajetoria_escola():
     pipeline = [
         {
             '$match': {
-                'escola': escola
+                'escola': escola,
+                'municipio': municipio
             }
         },
         {
@@ -340,6 +342,7 @@ def trajetoria_escola():
         # Preparando resposta
         response = {
             'escola': escola,
+            'municipio': municipio,
             'trajetoria': []
         }
 
