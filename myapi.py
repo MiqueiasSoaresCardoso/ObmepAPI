@@ -220,6 +220,8 @@ def comparar_desempenho_municipal_estadual():
 
 
 # ENDPOINT - Exibir trajetória de um estado ao longo das edições
+#PEDIR APENAS O ESTADO
+#GRAFICO DE LINHA
 @app.route('/api/trajetoria-estado', methods=['GET'])
 def trajetoria_estado():
     estado = request.args.get('estado', default='PB', type=str)
