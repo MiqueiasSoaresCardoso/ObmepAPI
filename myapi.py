@@ -491,46 +491,6 @@ def comparar_desempenho():
     return jsonify(response), 200
 
 
-# ENDPOINT - Listar todos os estados por ordem descrescente, considerando a quantidade de premiações em uma edição especifica
-@app.route('/api/estados-mais-premiacoes', methods=['GET'])
-def estados_mais_premiacoes():
-    #edicao = request.args.get('edicao',default='2023', type=int)
-
-    #if not edicao:
-        #return jsonify({'message': 'O parâmetro "edicao" é obrigatório'}), 400
-
-    pipeline = [
-        {
-            '$group': {
-                '_id': '$uf',
-                'total_premiacoes': {'$sum': 1}
-            }
-        },
-        {
-            '$sort': {
-                'total_premiacoes': -1
-            }
-        }
-    ]
-
-    resultados = list(collection.aggregate(pipeline))
-
-    if resultados:
-        response = {
-
-            'estados': []
-        }
-
-        for resultado in resultados:
-            response['estados'].append({
-                'estado': resultado['_id'],
-                'total_premiacoes': resultado['total_premiacoes']
-            })
-
-        return jsonify(response), 200
-    else:
-        return jsonify({'message': 'Nenhuma informação encontrada para a edição especificada'}), 404
-
 
 # ENDPOINT - Exibir Ranking geral de premiações por estado ao longo dos anos
 # CONSULTAS PRINCIPAL
