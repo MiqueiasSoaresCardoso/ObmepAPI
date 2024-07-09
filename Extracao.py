@@ -15,6 +15,7 @@ try:
 except pd.errors.ParserError:
     df = pd.read_csv(csv_file_path, delimiter=',', encoding='latin1')
 
+#Passo 4: Remover acentos
 if 'municipio' in df.columns:
     df['municipio'] = df['municipio'].apply(unidecode)
 
