@@ -9,7 +9,7 @@ from flask_cors import CORS
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
 client = MongoClient(uri, ssl=True)
 db = client['Obmep']
-collection = db['Escola']
+collection = db['Aluno']
 
 app = Flask(__name__)
 CORS(app)

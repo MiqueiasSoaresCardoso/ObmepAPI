@@ -1,11 +1,12 @@
 import pandas as pd
 from pymongo import MongoClient
+from unidecode import unidecode
 #
 # Passo 1: Configurar a conexão com o MongoDB
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
 client = MongoClient(uri, ssl=True)
 db = client['Obmep']
-collection = db['Escola']
+collection = db['Aluno']
 
 # Passo 3: Ler os dados do CSV para um DataFrame
 csv_file_path = "C:\\Users\\mique\\Downloads\\obmep.csv"
@@ -13,6 +14,9 @@ try:
     df = pd.read_csv(csv_file_path, delimiter=';', encoding='latin1')  # Tente alterar o delimitador se necessário
 except pd.errors.ParserError:
     df = pd.read_csv(csv_file_path, delimiter=',', encoding='latin1')
+
+if 'municipio' in df.columns:
+    df['municipio'] = df['municipio'].apply(unidecode)
 
 # Passo 4: Converter o DataFrame para uma lista de dicionários
 data_dict = df.to_dict(orient="records")
