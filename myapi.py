@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 from pymongo import MongoClient
 import os
 import sys
+
 from flask_cors import CORS
 
 # Configuração da conexão com MongoDB Atlas
@@ -12,6 +13,8 @@ db = client['Obmep']
 collection = db['Aluno']
 
 app = Flask(__name__)
+
+
 CORS(app)
 #Criação dos Indices
 collection.create_index({"escola": 1})
@@ -24,9 +27,11 @@ collection.create_index({"uf": 1})
 
 # ENDPOINTS GERAIS
 @app.route('/api/listar-escolas', methods=['GET'])
+
 def listar_escolas():
     estado = request.args.get('estado', default='PB', type=str)
-    municipio = request.args.get('municipio', default='JOÃO PESSOA', type=int)
+    municipio = request.args.get('municipio', default='JOÃO PESSOA', type=str)
+
 
     pipeline = [
         {
