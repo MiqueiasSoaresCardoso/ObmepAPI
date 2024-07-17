@@ -416,8 +416,9 @@ def trajetoria_escola():
 @app.route('/api/comparar-desempenho', methods=['GET'])
 def comparar_desempenho():
     estado = request.args.get('estado', default='PB', type=str)
-    edicao = request.args.get('edicao', default= 2023, type=str)
+    edicao = request.args.get('edicao', default=2023, type=int)
     nivel = 3  # Considerando apenas o nível 3 (Ensino médio)
+
 
     pipeline_federais = [
         {
