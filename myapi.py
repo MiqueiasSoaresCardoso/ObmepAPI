@@ -47,6 +47,11 @@ def listar_escolas():
 
             }
         },
+        {
+            '$sort':{
+                '_id': 1
+            }
+        }
 
 
     ]
