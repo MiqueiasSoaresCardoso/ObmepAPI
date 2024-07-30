@@ -79,6 +79,11 @@ def listar_municipios():
                 '_id': '$municipio',
             }
         },
+        {
+            '$sort':{
+                '_id': 1
+            }
+        }
 
     ]
 
