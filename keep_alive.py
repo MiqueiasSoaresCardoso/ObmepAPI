@@ -2,7 +2,7 @@ import requests
 import time
 import threading
 
-URL = "https://miqueiassoarescardoso.github.io/obmepemgraficos/resultados.html"  # Substitua pela URL correta
+URL = "https://miqueiassoarescardoso.github.io/ObmepWEB/resultados.html"  # Substitua pela URL correta
 
 def keep_alive():
     while True:

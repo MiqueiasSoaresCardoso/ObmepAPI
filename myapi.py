@@ -27,6 +27,93 @@ collection.create_index({"uf": 1})
 
 
 # ENDPOINTS GERAIS
+from flask import Flask, jsonify
+from pymongo import MongoClient
+
+# Supondo que 'app' e 'collection' já estão configurados
+# Exemplo de configuração (descomente e ajuste se necessário):
+# app = Flask(__name__)
+# client = MongoClient('mongodb://localhost:27017/') # Ajuste sua string de conexão
+# db = client['seu_banco_de_dados'] # Ajuste o nome do banco
+# collection = db['sua_colecao_de_medalhas'] # Ajuste o nome da coleção
+
+# É uma boa prática renomear a rota para refletir sua nova funcionalidade
+@app.route('/api/listar-total-medalhas-por-escola', methods=['GET'])
+def listar_total_medalhas_por_escola():
+    pipeline = [
+        {
+            # Primeiro, podemos opcionalmente filtrar documentos que não têm medalha,
+            # se sua coleção puder ter entradas sem medalha.
+            # Se toda entrada na coleção tem uma medalha (Ouro, Prata, Bronze, etc.),
+            # este $match pode não ser estritamente necessário.
+            '$match': {
+                'medalha': {'$in': ['Ouro', 'Prata', 'Bronze']} # Adicione outros tipos se houver
+                # Ou, se qualquer valor não nulo em 'medalha' conta:
+                # 'medalha': {'$ne': None, '$exists': True}
+            }
+        },
+        {
+            '$group': {
+                '_id': {
+                    'uf': '$uf',
+                    'municipio': '$municipio',
+                    'escola': '$escola'
+                    # Nível, ciclo_avaliativo e edicao foram removidos do _id
+                    # para que todas as medalhas de uma escola (mesmo nome, município, UF)
+                    # sejam somadas, independentemente desses outros fatores.
+                },
+                # Simplesmente contamos quantos documentos (medalhas) existem para cada grupo de escola.
+                'total_medalhas': {'$sum': 1}
+                # Se você quisesse manter a contagem por tipo E o total, poderia ser:
+                # 'total_ouro': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Ouro']}, 1, 0]}},
+                # 'total_prata': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Prata']}, 1, 0]}},
+                # 'total_bronze': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Bronze']}, 1, 0]}},
+                # 'total_medalhas_geral': {'$sum': 1} # Soma todas as medalhas para o grupo
+            }
+        },
+        {
+            # Opcional: Remodelar a saída para um formato mais plano e amigável
+            '$project': {
+                '_id': 0, # Remove o campo _id que é um objeto
+                'uf': '$_id.uf',
+                'municipio': '$_id.municipio',
+                'escola': '$_id.escola',
+                'total_medalhas': '$total_medalhas'
+                # Se você manteve as contagens individuais no $group:
+                # 'total_ouro': '$total_ouro',
+                # 'total_prata': '$total_prata',
+                # 'total_bronze': '$total_bronze',
+            }
+        },
+        {
+            '$sort': {
+                'total_medalhas': -1, # <--- AQUI! -1 para ordem decrescente
+                'uf': 1,
+                'municipio': 1,
+                'escola': 1    # E finalmente por Escola
+            }
+        }
+    ]
+
+    try:
+        # Lembre-se de manter allowDiskUse=True para o caso de a ordenação
+        # dos resultados agrupados ainda ser grande.
+        resultados_cursor = collection.aggregate(pipeline, allowDiskUse=True)
+        resultados = list(resultados_cursor)
+
+        if resultados:
+            # A chave no JSON de resposta foi alterada para refletir o conteúdo
+            return jsonify({'escolas_com_total_medalhas': resultados}), 200
+        else:
+            return jsonify({'message': 'Nenhuma escola com medalhas encontrada'}), 404
+    except Exception as e:
+        # É uma boa prática logar o erro no servidor
+        app.logger.error(f"Erro durante a agregação de medalhas por escola: {e}")
+        return jsonify({'message': 'Erro ao processar a solicitação', 'error': str(e)}), 500
+
+# Exemplo de como executar o Flask app (descomente se estiver rodando este arquivo diretamente)
+# if __name__ == '__main__':
+#     app.run(debug=True)
 @app.route('/api/listar-escolas', methods=['GET'])
 
 def listar_escolas():
@@ -66,6 +153,52 @@ def listar_escolas():
         }), 200
     else:
         return jsonify({'message': 'Nenhuma instituição encontrada para os critérios especificados'}), 404
+
+
+@app.route('/api/listar-todas-escolas', methods=['GET'])
+def listar_todas_escolas():
+    pipeline = [
+        {
+            '$group': {
+                '_id': {
+                    'uf': '$uf',
+                    'municipio': '$municipio',
+                    'escola': '$escola',
+                    'nivel': '$nivel',
+                    'ciclo_avaliativo': '$ciclo_avaliativo',
+                    'edicao': '$edicao'
+                },
+                'total_ouro': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Ouro']}, 1, 0]}},
+                'total_prata': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Prata']}, 1, 0]}},
+                'total_bronze': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Bronze']}, 1, 0]}},
+                'total_geral': {'$sum': 1}  # Conta o total de documentos agrupados
+            }
+        },
+        {
+            '$sort': {
+                '_id.uf': 1,
+                '_id.municipio': 1,
+                '_id.escola': 1,
+                '_id.edicao': 1
+                # Considerar adicionar '_id.nivel' e '_id.ciclo_avaliativo' aqui
+                # para uma ordenação mais determinística se houver múltiplos
+                # níveis/ciclos para a mesma escola/edição.
+            }
+        }
+    ]
+
+    try:
+        # Adicionar allowDiskUse=True
+        resultados = list(collection.aggregate(pipeline, allowDiskUse=True))
+
+        if resultados:
+            return jsonify({'escolas': resultados}), 200
+        else:
+            return jsonify({'message': 'Nenhuma escola encontrada com os critérios fornecidos'}), 404
+    except Exception as e:
+        # Logar o erro pode ser útil para depuração
+        print(f"Erro durante a agregação: {e}")
+        return jsonify({'message': 'Erro ao processar a solicitação', 'error': str(e)}), 500
 
 
 @app.route('/api/listar-municipios', methods=['GET'])
