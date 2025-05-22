@@ -38,80 +38,215 @@ from pymongo import MongoClient
 # collection = db['sua_colecao_de_medalhas'] # Ajuste o nome da coleção
 
 # É uma boa prática renomear a rota para refletir sua nova funcionalidade
-@app.route('/api/listar-total-medalhas-por-escola', methods=['GET'])
-def listar_total_medalhas_por_escola():
+
+from flask import Flask, jsonify
+from pymongo import MongoClient
+
+# Supondo que 'app' e 'collection' já estão configurados
+# Exemplo de configuração:
+# app = Flask(__name__)
+# client = MongoClient('mongodb://localhost:27017/')
+# db = client['seu_banco_de_dados']
+# collection = db['sua_colecao_de_medalhas']
+#ROTA NOVA
+@app.route('/api/medalhas-escola-ano-nivel', methods=['GET'])
+def medalhas_escola_ano_nivel():
     pipeline = [
         {
-            # Primeiro, podemos opcionalmente filtrar documentos que não têm medalha,
-            # se sua coleção puder ter entradas sem medalha.
-            # Se toda entrada na coleção tem uma medalha (Ouro, Prata, Bronze, etc.),
-            # este $match pode não ser estritamente necessário.
+            # 1. Filtrar medalhas válidas e garantir que 'edicao' e 'nivel' existam (opcional)
             '$match': {
-                'medalha': {'$in': ['Ouro', 'Prata', 'Bronze']} # Adicione outros tipos se houver
-                # Ou, se qualquer valor não nulo em 'medalha' conta:
-                # 'medalha': {'$ne': None, '$exists': True}
+                'medalha': {'$in': ['Ouro', 'Prata', 'Bronze']},
+                'edicao': {'$ne': None, '$exists': True}, # Garante que a edição existe
+                'nivel': {'$ne': None, '$exists': True}   # Garante que o nível existe
             }
         },
         {
+            # 2. Primeiro agrupamento: Contar medalhas por Escola, Edição e Nível
             '$group': {
                 '_id': {
                     'uf': '$uf',
                     'municipio': '$municipio',
-                    'escola': '$escola'
-                    # Nível, ciclo_avaliativo e edicao foram removidos do _id
-                    # para que todas as medalhas de uma escola (mesmo nome, município, UF)
-                    # sejam somadas, independentemente desses outros fatores.
+                    'escola': '$escola',
+                    'edicao': '$edicao',
+                    'nivel': '$nivel'
                 },
-                # Simplesmente contamos quantos documentos (medalhas) existem para cada grupo de escola.
                 'total_medalhas': {'$sum': 1}
-                # Se você quisesse manter a contagem por tipo E o total, poderia ser:
-                # 'total_ouro': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Ouro']}, 1, 0]}},
-                # 'total_prata': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Prata']}, 1, 0]}},
-                # 'total_bronze': {'$sum': {'$cond': [{'$eq': ['$medalha', 'Bronze']}, 1, 0]}},
-                # 'total_medalhas_geral': {'$sum': 1} # Soma todas as medalhas para o grupo
             }
         },
         {
-            # Opcional: Remodelar a saída para um formato mais plano e amigável
+            # 3. Ordenar para o próximo $group (para $push ordenado dentro dos arrays)
+            # Ordena primeiro por identificadores da escola, depois por edição, depois por nível
+            '$sort': {
+                '_id.uf': 1,
+                '_id.municipio': 1,
+                '_id.escola': 1,
+                '_id.edicao': 1,
+                '_id.nivel': 1
+            }
+        },
+        {
+            # 4. Segundo agrupamento: Agrupar por Escola e Edição
+            # para criar um array de níveis com suas medalhas para cada edição
+            '$group': {
+                '_id': {
+                    'uf': '$_id.uf',
+                    'municipio': '$_id.municipio',
+                    'escola': '$_id.escola',
+                    'edicao': '$_id.edicao'
+                },
+                'niveis_nesta_edicao': {
+                    '$push': {
+                        'nivel': '$_id.nivel',
+                        'medalhas': '$total_medalhas'
+                    }
+                },
+                # Também podemos calcular o total de medalhas para esta edição específica da escola
+                'total_medalhas_edicao': {'$sum': '$total_medalhas'}
+            }
+        },
+        {
+            # 5. Terceiro agrupamento: Agrupar por Escola
+            # para criar um array de edições (com seus níveis) para cada escola
+            '$group': {
+                '_id': {
+                    'uf': '$_id.uf',
+                    'municipio': '$_id.municipio',
+                    'escola': '$_id.escola'
+                },
+                'participacoes_por_ano': {
+                    '$push': {
+                        'ano_edicao': '$_id.edicao',
+                        'total_medalhas_neste_ano': '$total_medalhas_edicao',
+                        'detalhes_por_nivel': '$niveis_nesta_edicao'
+                    }
+                },
+                # Calcular o total geral de medalhas da escola em todas as edições
+                'total_geral_medalhas_escola': {'$sum': '$total_medalhas_edicao'}
+            }
+        },
+        {
+            # 6. Formatar a saída final
             '$project': {
-                '_id': 0, # Remove o campo _id que é um objeto
+                '_id': 0,
                 'uf': '$_id.uf',
                 'municipio': '$_id.municipio',
                 'escola': '$_id.escola',
-                'total_medalhas': '$total_medalhas'
-                # Se você manteve as contagens individuais no $group:
-                # 'total_ouro': '$total_ouro',
-                # 'total_prata': '$total_prata',
-                # 'total_bronze': '$total_bronze',
+                'total_geral_medalhas_escola': 1,
+                'participacoes_por_ano': 1
             }
         },
         {
+            # 7. Ordenar o resultado final pelas escolas com mais medalhas no geral
             '$sort': {
-                'total_medalhas': -1, # <--- AQUI! -1 para ordem decrescente
+                'total_geral_medalhas_escola': -1,
                 'uf': 1,
                 'municipio': 1,
-                'escola': 1    # E finalmente por Escola
+                'escola': 1
             }
         }
     ]
 
     try:
-        # Lembre-se de manter allowDiskUse=True para o caso de a ordenação
-        # dos resultados agrupados ainda ser grande.
         resultados_cursor = collection.aggregate(pipeline, allowDiskUse=True)
         resultados = list(resultados_cursor)
 
         if resultados:
-            # A chave no JSON de resposta foi alterada para refletir o conteúdo
-            return jsonify({'escolas_com_total_medalhas': resultados}), 200
+            return jsonify({'medalhas_detalhadas_por_escola': resultados}), 200
+        else:
+            return jsonify({'message': 'Nenhuma escola com dados de medalhas encontrados'}), 404
+    except Exception as e:
+        # app.logger.error(f"Erro em /api/medalhas-escola-ano-nivel: {e}")
+        print(f"Erro em /api/medalhas-escola-ano-nivel: {e}")
+        return jsonify({'message': 'Erro ao processar a solicitação', 'error': str(e)}), 500
+@app.route('/api/listar-total-medalhas-por-escola', methods=['GET'])
+def listar_total_medalhas_por_escola():
+    pipeline = [
+        {
+            # 1. Filtrar apenas documentos que representam medalhas válidas
+            '$match': {
+                'medalha': {'$in': ['Ouro', 'Prata', 'Bronze']},
+                # Opcional: Adicionar filtro para 'nivel' se necessário
+                # 'nivel': {'$ne': None, '$exists': True}
+            }
+        },
+        {
+            # 2. Agrupar por escola E nível para obter o total de medalhas para cada nível da escola
+            '$group': {
+                '_id': {
+                    'uf': '$uf',
+                    'municipio': '$municipio',
+                    'escola': '$escola',
+                    'nivel': '$nivel'
+                },
+                'medalhas_neste_nivel': {'$sum': 1}
+            }
+        },
+        {
+            # 3. Opcional, mas recomendado: Ordenar antes do próximo $group para que o $push
+            # mantenha uma ordem previsível (ex: alfabética por nível) dentro do array.
+            '$sort': {
+                '_id.uf': 1,
+                '_id.municipio': 1,
+                '_id.escola': 1,
+                '_id.nivel': 1 # Ordena por nível aqui
+            }
+        },
+        {
+            # 4. Agrupar novamente, desta vez apenas por escola, para:
+            #    a) Calcular o total geral de medalhas da escola.
+            #    b) Criar um array com os detalhes de cada nível.
+            '$group': {
+                '_id': { # Chave de agrupamento é apenas a identificação da escola
+                    'uf': '$_id.uf',
+                    'municipio': '$_id.municipio',
+                    'escola': '$_id.escola'
+                },
+                'total_geral_medalhas': {'$sum': '$medalhas_neste_nivel'}, # Soma as medalhas de todos os níveis da escola
+                'detalhes_por_nivel': {
+                    '$push': { # Cria um array com os detalhes de cada nível
+                        'nivel': '$_id.nivel', # O nível original
+                        'total_medalhas_nivel': '$medalhas_neste_nivel' # As medalhas daquele nível específico
+                    }
+                }
+            }
+        },
+        {
+            # 5. Formatar a saída final
+            '$project': {
+                '_id': 0, # Remover o _id estruturado
+                'uf': '$_id.uf',
+                'municipio': '$_id.municipio',
+                'escola': '$_id.escola',
+                'total_geral_medalhas': 1,
+                'detalhes_por_nivel': 1
+            }
+        },
+        {
+            # 6. Ordenar o resultado final pelo total geral de medalhas (maior para menor)
+            # e por critérios de desempate.
+            '$sort': {
+                'total_geral_medalhas': -1,
+                'uf': 1,
+                'municipio': 1,
+                'escola': 1
+            }
+        }
+    ]
+
+    try:
+        resultados_cursor = collection.aggregate(pipeline, allowDiskUse=True)
+        resultados = list(resultados_cursor)
+
+        if resultados:
+            # A chave na resposta JSON pode ser mantida ou ajustada conforme sua preferência
+            return jsonify({'escolas_com_detalhes_medalhas': resultados}), 200
         else:
             return jsonify({'message': 'Nenhuma escola com medalhas encontrada'}), 404
     except Exception as e:
-        # É uma boa prática logar o erro no servidor
-        app.logger.error(f"Erro durante a agregação de medalhas por escola: {e}")
+        # app.logger.error(f"Erro na rota /api/listar-total-medalhas-por-escola: {e}") # Se logger configurado
+        print(f"Erro na rota /api/listar-total-medalhas-por-escola: {e}")
         return jsonify({'message': 'Erro ao processar a solicitação', 'error': str(e)}), 500
 
-# Exemplo de como executar o Flask app (descomente se estiver rodando este arquivo diretamente)
 # if __name__ == '__main__':
 #     app.run(debug=True)
 @app.route('/api/listar-escolas', methods=['GET'])
@@ -787,6 +922,9 @@ def comparar_desempenho_publico_privado():
         })
 
     return jsonify(response), 200
+
+#TESTES
+
 
 
 
