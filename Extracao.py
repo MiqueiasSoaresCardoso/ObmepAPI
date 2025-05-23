@@ -6,10 +6,12 @@ from unidecode import unidecode
 uri = "mongodb+srv://miqueiassoares:pMmAke6bpsOI8u6T@cluster0.sjuug1b.mongodb.net/Obmep"
 client = MongoClient(uri, ssl=True)
 db = client['Obmep']
-collection = db['Aluno']
+#collection = db['Aluno']
+collection = db['Aluno2']
 
 # Passo 3: Ler os dados do CSV para um DataFrame
-csv_file_path = "C:\\Users\\mique\\Downloads\\obmep.csv"
+#csv_file_path = "C:\\Users\\mique\\Downloads\\obmep.csv"
+csv_file_path = "C:\\Users\\mique\\IdeaProjects\\Obmep\\Mestrado\\obmep_v2.csv"
 try:
     df = pd.read_csv(csv_file_path, delimiter=';', encoding='latin1')  # Tente alterar o delimitador se necessário
 except pd.errors.ParserError:
