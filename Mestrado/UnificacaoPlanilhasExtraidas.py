@@ -1,6 +1,13 @@
 import pandas as pd
 from openpyxl import load_workbook
 
+#Unificação das Tabelas obtidas via Webscrapping
+
+# Esse código combina os dados das planilhas "Nivel1", "Nivel2" e "Nivel3 obtidos com base na"
+# extração via UIPath de um arquivo Excel da OBMEP para o ano designado, adiciona colunas de nível e ano,
+# cria uma nova aba chamada "Combined" com os dados unificados,
+# remove as abas originais e exporta o resultado final para um arquivo CSV
+
 arquivo_xlsx = "C:\\Users\\Henrique\\Documents\\UiPath\\Teste\\1OBMEP_BRONZE_2016.xlsx"
 arquivo_csv = "C:\\Users\\Henrique\\Documents\\UiPath\\Teste\\1OBMEP_BRONZE_2016.csv"
 
