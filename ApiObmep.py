@@ -1281,7 +1281,7 @@ def obter_analise_completa_escolas_p98():
             {'$group': {'_id': {'escola_obmep': '$escola','uf_obmep': '$uf','municipio_obmep': '$municipio'},'pontuacao_total_ponderada_periodo': {'$sum': '$pontos_medalha'},'total_medalhas_simples_periodo': {'$sum': 1}}},
             {'$match': {'pontuacao_total_ponderada_periodo': {'$gte': P98_PONTUACAO_CORTE}}},
             {'$sort': {'pontuacao_total_ponderada_periodo': -1}},
-            {'$skip': 316},
+            #{'$skip': 316},
             {'$limit': 1},
             {'$project': {'_id': 0,'identificador_escola_obmep': '$_id','pontuacao_ponderada_da_escola': '$pontuacao_total_ponderada_periodo','total_medalhas_simples_da_escola': '$total_medalhas_simples_periodo'}}
         ]
